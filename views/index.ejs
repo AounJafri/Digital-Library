@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Library</title>
+  <link rel="stylesheet" href="/styles/main.css">
+  <!-- <script src="https://unpkg.com/axios/dist/axios.min.js"></script> -->
+</head>
+
+<body>
+  <div class="container">
+    <h1 style="margin-left: 40%;">My Books</h1>
+    <a id="newPostBtn" href="/new">Add New Book</a><br>
+    <% if(locals.books[0]){ %>
+    <h3 style="margin-top: 25px;margin-bottom: 5px;">Sort By </h3>
+    <a href="/rating" >Rating</a>
+    <a href="/latest">Latest</a>
+    <a href="/title">Title</a>
+    <ul id="postsList">
+    
+      <% books.forEach(book=> { %>
+        <li>
+          <img src="https://covers.openlibrary.org/b/isbn/<%=book.isbn%>-M.jpg" alt="Cover of book" style="float: left;margin-right: 25px;">
+          <h2>
+            <%=book.title%>
+          </h2>
+          <small>
+            <%=book.date %>
+          </small>
+          <p>
+            <%=book.review%>
+          </p>
+          <small>Rating: <%=book.rating%> </small>
+          <a class="edit" href="/edit/<%= book.id %>">Edit</a>
+          <a class="delete" href="/api/posts/delete/<%= book.id %>">Delete</a>
+        </li>
+        <% }); %>
+       <% }else{ %>
+          <h2 style="margin-top: 50px;">You currently don't have any books!</h2>
+      <% } %>
+    </ul>
+  </div>
+
+</body>
+
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <% if (locals.book) { %>
+  <title>Edit Review</title>
+  <% }else %>
+  <title>Add Book</title>
+  <link rel="stylesheet" href="/styles/main.css">
+</head>
+
+<body>
+
+  <div class="container">
+    <% if(locals.error){ %>
+      <h1><%= error %></h1>
+      <% }else {%>
+    <h1>
+      <%= heading %>
+    </h1>
+    <% } %>
+
+    <% if (locals.book) { %>
+      <form id="editForm" method="post" action="/api/posts/<%=book.id%>">
+        <textarea name="review" rows="10"><%=book.review %></textarea>
+        <input type="text" name="rating" value="<%=book.rating %>">
+        <button class="full-width" type="submit">
+          <%= submit %>
+        </button>
+      </form>
+      <% } else if(!locals.book && !locals.error) {%>
+        <form id="newPostForm" method="post" action="/api/posts">
+          <input type="text" name="title" placeholder="Title" required>
+          <input type="text" name="isbn" placeholder="ISBN" required>
+          <textarea name="review" placeholder="Review" required rows="10"></textarea>
+          <input type="text" name="rating" placeholder="Rating" required>
+          <button class="full-width" type="submit">
+            <%= submit %>
+          </button>
+        </form>
+        <% } %>
+
+  </div>
+  <script>
+    // Check if alertMessage is defined and not empty
+     if (typeof error !== 'undefined' && error) { 
+        alert(error);
+     } 
+</script>
+</body>
+
+</html>
