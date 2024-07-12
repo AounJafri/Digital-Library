@@ -1,6 +1,7 @@
 import express from "express";
 import bodyParser from "body-parser";
 import pg from "pg";
+import bcrypt from "bcrypt";
 
 
 const app = express();
@@ -22,14 +23,83 @@ app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
+let current_user;
+
+app.get("/",(req,res)=>{
+  res.render("login.ejs");
+})
+// GET ROUTES
+app.get("/login",(req,res)=>{
+  res.render("login.ejs",{ sent: "login"})
+})
+app.get("/register",(req,res)=>{
+  res.render("login.ejs", { sent: "register"})
+})
+
+app.get("/logout", (req,res)=>{
+  current_user={};
+  res.redirect("/");
+})
+// POST USER ROUTES
+
+app.post("/register", async(req,res)=>{
+  const { username, password, confirm_password } = req.body;
+  
+  if (!username || !password || !confirm_password) {
+    return res.render("login.ejs", { sent: "register",error: "All field are required"});
+  }
+  if (password!==confirm_password) {
+    return res.render("login.ejs", { sent: "register",error: "Passwords Must Match"});
+  }
+  const hashedPassword = await bcrypt.hash(password,10);
+
+  try {
+    const result = await db.query("INSERT INTO Users (username, password) VALUES ($1,$2) Returning *;",[username,hashedPassword]);
+    current_user = result.rows[0];
+    console.log(current_user)
+    console.log(current_user.userid);
+    // res.render("login.ejs", { sent: "register",error: "Registeration Successful! You'll be redirected to home page shortly."});
+    res.redirect("/Home")
+    // setTimeout(()=>{
+    // res.redirect("/Home");
+    // },2000)
+
+  } catch (error) {
+   console.log(error); 
+  }
+});
+app.post("/login", async(req,res)=>{
+    const {username, password } = req.body;
+    if (!username || !password) {
+      return res.render("login.ejs", { sent: "login",error: "All field are required"});
+    }
+
+    const result = await db.query("SELECT * FROM Users WHERE username = $1",[username]);
+    if (!result.rows[0]) {
+      return res.render("login.ejs", { sent: "login",error: "User does not exist"});
+    }
+    
+    current_user = result.rows[0];
+    if(!await bcrypt.compare(password,current_user.password)){
+      return res.render("login.ejs", { sent: "register",error: "Incorrect Password"});
+    }else{
+      // res.render("login.ejs", { sent: "register",error: "Login Successfull! You'll be redirected to home page shortly"});
+      res.redirect("/Home");
+      // setTimeout(()=>{
+      //   res.redirect("/Home");
+      // },2000)
+    }
+
+})
+
 
 // ROUTE TO RENDER THE MAIN PAGE
-app.get("/", async (req, res) => {
+app.get("/Home", async (req, res) => {
   try {
 
-    const result = await db.query("SELECT * FROM books ORDER BY id ASC");
+    const result = await db.query("SELECT * FROM books WHERE userid = $1 ORDER BY id ASC",[current_user.userid]);
 
-    res.render("index.ejs", { books: result.rows });
+    return res.render("index.ejs", { books: result.rows,user:current_user.username });
   } catch (error) {
     res.status(500).json({ message: "Error fetching posts" });
   }
@@ -41,9 +111,9 @@ app.get("/", async (req, res) => {
 app.get("/rating",async (req,res)=>{
   try {
 
-    const result = await db.query("SELECT * FROM books ORDER BY rating DESC");
+    const result = await db.query("SELECT * FROM books WHERE userid=$1 ORDER BY rating DESC",[current_user.userid]);
 
-    res.render("index.ejs", { books: result.rows });
+    res.render("index.ejs", { books: result.rows,user:current_user.username });
   } catch (error) {
     res.status(500).json({ message: "Error fetching posts" });
   }
@@ -51,9 +121,9 @@ app.get("/rating",async (req,res)=>{
 
 app.get("/latest",async (req,res)=>{
   try {
-    const result = await db.query("SELECT * FROM books ORDER BY date DESC");
+    const result = await db.query("SELECT * FROM books WHERE userid=$1 ORDER BY date DESC",[current_user.userid]);
 
-    res.render("index.ejs", { books: result.rows });
+    res.render("index.ejs", { books: result.rows,user:current_user.username });
   } catch (error) {
     res.status(500).json({ message: "Error fetching posts" });
   }
@@ -61,9 +131,9 @@ app.get("/latest",async (req,res)=>{
 
 app.get("/title",async(req,res)=>{
   try {
-    const result = await db.query("SELECT * FROM books ORDER BY title ASC");
+    const result = await db.query("SELECT * FROM books WHERE userid=$1 ORDER BY title ASC",[current_user.userid]);
 
-    res.render("index.ejs", { books: result.rows });
+    res.render("index.ejs", { books: result.rows,user:current_user.username });
   } catch (error) {
     res.status(500).json({ message: "Error fetching posts" });
   }
@@ -101,8 +171,8 @@ app.post("/api/posts", async (req, res) => {
     var isbn = req.body.isbn;
     var rating = req.body.rating;
     var date= new Date();
-    const reslut = await db.query("INSERT INTO books(title,isbn,review,rating,date) VALUES($1,$2,$3,$4,$5) RETURNING *;",[title,isbn,review,rating,date]);
-    res.redirect("/");
+    const result = await db.query("INSERT INTO books(title,isbn,review,rating,date,userid) VALUES($1,$2,$3,$4,$5,$6) RETURNING *;",[title,isbn,review,rating,date,current_user.userid]);
+    res.redirect("/Home");
   } catch (error) {
     // res.status(500).json({ message: "Error creating post" });
     console.log(error);
@@ -121,9 +191,9 @@ app.post("/api/posts/:id", async (req, res) => {
     var review = req.body.review || response.rows[0].review;
     var rating = req.body.rating || response.rows[0].rating;
 
-    db.query("UPDATE books SET review = $1, rating = $2 WHERE id = $3",[review,rating,bookId]);
+    db.query("UPDATE books SET review = $1, rating = $2 WHERE id = $3 AND userid=$4",[review,rating,bookId,current_user.userid]);
 
-    res.redirect("/");
+    res.redirect("/Home");
   } catch (error) {
     res.status(500).json({ message: "Error updating post" });
   }
@@ -136,7 +206,7 @@ app.get("/api/posts/delete/:id", async (req, res) => {
   try {
 
     db.query("DELETE FROM books WHERE id=$1",[req.params.id]);
-    res.redirect("/");
+    res.redirect("/Home");
   } catch (error) {
     res.status(500).json({ message: "Error deleting post" });
   }

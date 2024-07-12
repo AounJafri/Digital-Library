@@ -11,8 +11,9 @@
 
 <body>
   <div class="container">
-    <h1 style="margin-left: 40%;">My Books</h1>
-    <a id="newPostBtn" href="/new">Add New Book</a><br>
+    <h1 style="margin-left: 35%;margin-bottom: 50px;"><%= user %>'s Books</h1>
+    <a id="newPostBtn" href="/new">Add New Book</a>
+    <a id="logOutButton" href="/logout">Log out</a><br>
     <% if(locals.books[0]){ %>
     <h3 style="margin-top: 25px;margin-bottom: 5px;">Sort By </h3>
     <a href="/rating" >Rating</a>
